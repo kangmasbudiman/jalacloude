@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jala Cloud — Sewa Cloud VPS & Layanan Cloud
 
-## Getting Started
+Platform sewa cloud VPS milik **CV JALA**. Dibangun dengan
+**Next.js 16 + TypeScript + Tailwind CSS v4 + Supabase Auth**, dengan pola
+login ala SumoPod (OAuth Google + PKCE). Tagline: *"Server aktif dalam 60 detik."*
 
-First, run the development server:
+## Fitur Tahap Ini (MVP)
+
+- **Login via Google** (Supabase OAuth + PKCE) alih-alih password
+- Halaman `/auth/callback` untuk menyelesaikan kembali dari Google (dengan penanganan error & timeout)
+- **Landing page** berbahasa Indonesia (hero, produk, harga)
+- **Dashboard shell**: sidebar 15 menu (dapat diciutkan) + topbar dengan profil Google
+- Halaman Ringkasan + halaman **VPS** (buat server dummy dengan pemilihan paket, wilayah, password)
+- Menu lain menampilkan halaman "Segera Hadir"
+- **Mode demo** otomatis: kalau `.env.local` belum diisi, app tetap jalan tanpa login asli
+
+## Harga Paket VPS
+
+| Paket | Spesifikasi | Harga/bulan |
+|---|---|---|
+| Jala Mini | 1 vCPU • 1 GB RAM • 20 GB NVMe | Rp 350.000 |
+| Jala Pro | 2 vCPU • 4 GB RAM • 60 GB NVMe | Rp 550.000 |
+| Jala Max | 4 vCPU • 8 GB RAM • 120 GB NVMe | Rp 645.000 |
+
+## Mengaktifkan Database (Tahap 2 — Dompet & VPS)
+
+Setelah login Google aktif, jalankan skema database:
+
+1. Buka **Supabase Dashboard → SQL Editor**.
+2. Paste seluruh isi [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
+3. Selesai — tabel `vps_servers` & `wallet_transactions` aktif dengan RLS
+   (setiap pengguna hanya melihat data miliknya sendiri).
+
+Alur bisnis yang aktif: isi saldo di **Dompet & Tagihan** → buka VPS →
+"Deploy" memotong saldo dan mencatat transaksi otomatis.
+Tanpa konfigurasi Supabase, semuanya tetap bisa dicoba dalam
+**mode demo** (data disimpan di localStorage browser).
+
+## Cara Jalankan
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# buka http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Mengaktifkan Login Google Asli (5 menit)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Buat proyek Supabase
+1. Daftar/masuk di [supabase.com](https://supabase.com) → **New project** (gratis).
+2. Setelah jadi, buka **Project Settings → API**. Salin:
+   - `Project URL` → untuk `NEXT_PUBLIC_SUPABASE_URL`
+   - `anon / publishable key` → untuk `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Buat OAuth Client Google
+1. Buka [console.cloud.google.com](https://console.cloud.google.com) → buat project.
+2. **APIs & Services → OAuth consent screen**:
+   - User type: **External**
+   - Isi nama app "Jala Cloud", email support, lalu tambahkan emailmu sebagai **test user** (sampai app dipublikasikan).
+3. **Credentials → Create Credentials → OAuth Client ID**:
+   - Application type: **Web application**
+   - **Authorized redirect URIs**: diambil dari Supabase (langkah 3) — bentuknya
+     `https://xxxx.supabase.co/auth/v1/callback`
 
-## Learn More
+### 3. Hubungkan Google ke Supabase
+1. Di Dashboard Supabase → **Authentication → Sign In / Up → Google** → toggle **Enable**.
+2. Tempel **Client ID** dan **Client Secret** dari langkah 2.
+3. **Authentication → URL Configuration**:
+   - **Site URL**: `http://localhost:3000`
+   - **Redirect URLs** tambahkan: `http://localhost:3000/auth/callback`
 
-To learn more about Next.js, take a look at the following resources:
+### 4. Isi `.env.local`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...   # anon/publishable key
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Lalu restart `npm run dev`. Tombol "Masuk dengan Google" sudah aktif.
 
-## Deploy on Vercel
+## Struktur Proyek
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/
+│   ├── page.tsx                  # Landing page
+│   ├── login/page.tsx            # Halaman login (tombol Google)
+│   ├── auth/callback/page.tsx    # Handler balikan OAuth
+│   └── dashboard/
+│       ├── layout.tsx            # Shell: sidebar + topbar + proteksi sesi
+│       ├── page.tsx              # Ringkasan
+│       ├── vps/page.tsx          # Manajemen VPS (dummy)
+│       └── [slug]/page.tsx       # Placeholder "Segera Hadir"
+├── components/
+│   ├── auth-provider.tsx         # Context sesi (signInWithGoogle, signOut)
+│   ├── google-button.tsx         # Tombol "Masuk dengan Google"
+│   └── site-header.tsx           # Header landing + banner mode demo
+└── lib/
+    ├── supabase.ts               # Inisialisasi client Supabase
+    └── menu.ts                   # Daftar menu sidebar
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Rencana Tahap Berikutnya
+
+1. **Tahap 2** — halaman Billing (saldo & top-up), tabel data VPS dari database, halaman detail VPS (restart/stop, metric)
+2. **Tahap 3** — guard middleware server-side (JWT Supabase) + backend provisioning
+3. **Tahap 4** — fitur tambahan: domain, storage, email, AI API
+
+---
+
+© 2026 CV JALA — Jala Cloud. Seluruh hak cipta dilindungi.
