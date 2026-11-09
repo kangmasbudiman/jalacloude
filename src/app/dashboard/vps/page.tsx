@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Plus,
   MoreHorizontal,
@@ -21,17 +22,11 @@ import {
   deleteVps,
   type VpsServer,
 } from "@/lib/vps-service";
-import { purchase, refundPurchase, getBalance } from "@/lib/wallet-service";
+import { purchase, refundPurchase } from "@/lib/wallet-service";
 import { rupiah, formatTanggal, isDemoMode } from "@/lib/common";
+import { VPS_PLANS, REGIONS, OS_OPTIONS } from "@/lib/plans";
 
-const VPS_PLANS = [
-  { name: "Jala Mini", cpu: "1 vCPU", ram: "1 GB", disk: "20 GB NVMe", price: 350000 },
-  { name: "Jala Pro", cpu: "2 vCPU", ram: "4 GB", disk: "60 GB NVMe", price: 550000, popular: true },
-  { name: "Jala Max", cpu: "4 vCPU", ram: "8 GB", disk: "120 GB NVMe", price: 645000 },
-];
 
-const REGIONS = ["Jakarta", "Surabaya", "Singapura"];
-const OS_OPTIONS = ["Ubuntu 24.04", "Debian 12", "AlmaLinux 9"];
 
 export default function VpsPage() {
   const [servers, setServers] = useState<VpsServer[]>([]);
@@ -125,11 +120,6 @@ export default function VpsPage() {
     }
   };
 
-  const saldoInfo = async () => {
-    const saldo = await getBalance();
-    alert(`Saldo saat ini: ${rupiah(saldo)}`);
-  };
-
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -140,13 +130,12 @@ export default function VpsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={saldoInfo}
+          <Link
+            href="/dashboard/billing"
             className="hidden h-10 items-center rounded-full border border-line bg-white px-4 text-sm font-medium text-ink hover:bg-surface sm:inline-flex"
           >
             Cek Saldo
-          </button>
+          </Link>
           <button
             type="button"
             onClick={() => setCreating(true)}
@@ -202,7 +191,12 @@ export default function VpsPage() {
               {servers.map((s) => (
                 <tr key={s.id} className="border-b border-line last:border-0">
                   <td className="px-5 py-3.5">
-                    <p className="font-medium text-ink">{s.name}</p>
+                    <Link
+                      href={`/dashboard/vps/${s.id}`}
+                      className="font-medium text-ink hover:text-brand"
+                    >
+                      {s.name}
+                    </Link>
                     <p className="text-xs text-copy">
                       {s.os} · {s.ip}
                     </p>
