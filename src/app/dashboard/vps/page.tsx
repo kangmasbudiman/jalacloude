@@ -23,7 +23,7 @@ import {
   type VpsServer,
 } from "@/lib/vps-service";
 import { purchase, refundPurchase } from "@/lib/wallet-service";
-import { rupiah, formatTanggal, isDemoMode } from "@/lib/common";
+import { rupiah, isDemoMode } from "@/lib/common";
 import { VPS_PLANS, REGIONS, OS_OPTIONS } from "@/lib/plans";
 
 
@@ -183,7 +183,6 @@ export default function VpsPage() {
                 <th className="hidden px-5 py-3 font-medium sm:table-cell">Paket</th>
                 <th className="hidden px-5 py-3 font-medium md:table-cell">Wilayah</th>
                 <th className="px-5 py-3 font-medium">Status</th>
-                <th className="hidden px-5 py-3 font-medium lg:table-cell">Dibuat</th>
                 <th className="w-10 px-5 py-3" />
               </tr>
             </thead>
@@ -230,9 +229,6 @@ export default function VpsPage() {
                       />
                       {s.status === "running" ? "Berjalan" : "Berhenti"}
                     </span>
-                  </td>
-                  <td className="hidden px-5 py-3.5 text-copy lg:table-cell">
-                    {formatTanggal(s.created_at)}
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="group relative">
