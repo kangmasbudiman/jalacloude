@@ -128,16 +128,39 @@ export default function InvoiceClient({ id }: { id: string }) {
       >
         {/* ================= KOP ================= */}
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <span className="grid size-14 place-items-center rounded-lg border-[3px] border-blue-600 text-2xl font-bold text-blue-600">
-              J
-            </span>
-            <div>
-              <p className="text-2xl font-bold tracking-tight text-gray-700">
-                Jala Cloud
-              </p>
-              <p className="mt-1 text-sm text-gray-500">CV JALA</p>
+          <div>
+            <div className="flex items-center gap-4">
+              {/* Monogram "ID" — gradien biru ala logo asli */}
+              <svg
+                viewBox="0 0 100 100"
+                className="size-16 shrink-0"
+                aria-label="Logo"
+                role="img"
+              >
+                <defs>
+                  <linearGradient id="logoBiru" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#5ec8f8" />
+                    <stop offset="100%" stopColor="#1565c0" />
+                  </linearGradient>
+                </defs>
+                <g fill="none" stroke="url(#logoBiru)" strokeLinecap="square">
+                  {/* batang vertikal (I) */}
+                  <line x1="12" y1="10" x2="12" y2="90" strokeWidth="9" />
+                  <line x1="27" y1="10" x2="27" y2="52" strokeWidth="9" />
+                  {/* D luar & D dalam */}
+                  <path d="M42 10 H55 A40 40 0 0 1 55 90 H42" strokeWidth="9" />
+                  <path d="M42 30 H54 A20 20 0 0 1 54 70 H42" strokeWidth="9" />
+                </g>
+              </svg>
+              <div>
+                <p className="text-2xl font-bold leading-7 tracking-tight text-gray-700">
+                  InData
+                  <br />
+                  Indonesia
+                </p>
+              </div>
             </div>
+            <p className="mt-2 text-sm text-gray-500">CV Jaring Laba Laba</p>
           </div>
           <p className="select-none text-4xl font-bold tracking-wide text-gray-300 print:text-gray-300">
             INVOICE
