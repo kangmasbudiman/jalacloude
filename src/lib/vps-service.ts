@@ -11,6 +11,8 @@ export type VpsServer = {
   os: string;
   region: string;
   ip: string;
+  /** Port NAT — hanya diisi untuk VPS yang berbagi IP publik dengan server lain */
+  port: number | null;
   status: VpsStatus;
   created_at: string;
 };
@@ -60,6 +62,7 @@ export async function createVps(input: CreateVpsInput): Promise<VpsServer> {
       id: uid(),
       user_id: userId,
       created_at: new Date().toISOString(),
+      port: null,
       ...payload,
     };
     lsSet("vps", [server, ...lsGet<VpsServer[]>("vps", [])]);

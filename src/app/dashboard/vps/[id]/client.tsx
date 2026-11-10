@@ -91,8 +91,9 @@ export default function VpsDetailClient({ id }: { id: string }) {
 
   const copyIp = async () => {
     if (!server) return;
+    const addr = server.port ? `${server.ip}:${server.port}` : server.ip;
     try {
-      await navigator.clipboard.writeText(server.ip);
+      await navigator.clipboard.writeText(addr);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -168,15 +169,28 @@ export default function VpsDetailClient({ id }: { id: string }) {
               {server.os} · {server.region}
               <span className="inline-flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 font-mono text-xs text-ink">
                 {server.ip}
+                {server.port ? `:${server.port}` : ""}
                 <button
                   type="button"
                   onClick={copyIp}
                   className="text-copy hover:text-brand"
-                  aria-label="Salin IP"
+                  aria-label="Salin alamat"
                 >
-                  {copied ? <Copy className="size-3 text-brand" /> : <Copy className="size-3" />}
+                  {copied ? (
+                    <Copy className="size-3 text-brand" />
+                  ) : (
+                    <Copy className="size-3" />
+                  )}
                 </button>
               </span>
+              {server.port && (
+                <span
+                  className="inline-flex items-center rounded-md bg-brand-pale px-1.5 py-0.5 text-[10px] font-medium text-brand"
+                  title="VPS NAT — berbagi IP publik dengan server lain, dibedakan lewat port"
+                >
+                  Port NAT
+                </span>
+              )}
             </p>
           </div>
 

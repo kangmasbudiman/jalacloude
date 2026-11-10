@@ -13,6 +13,8 @@ create table if not exists public.vps_servers (
   os          text not null,
   region      text not null,
   ip          text not null,
+  /** Port NAT (VPS yang berbagi IP publik, dibedakan lewat port). null = IP penuh. */
+  port        smallint,
   status      text not null default 'running' check (status in ('running', 'stopped')),
   created_at  timestamptz not null default now()
 );

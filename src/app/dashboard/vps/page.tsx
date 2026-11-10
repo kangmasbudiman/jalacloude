@@ -198,7 +198,19 @@ export default function VpsPage() {
                       {s.name}
                     </Link>
                     <p className="text-xs text-copy">
-                      {s.os} · {s.ip}
+                      {s.os} ·{" "}
+                      <span className="font-mono">
+                        {s.ip}
+                        {s.port ? `:${s.port}` : ""}
+                      </span>
+                      {s.port && (
+                        <span
+                          className="ml-1.5 inline-flex items-center rounded bg-brand-pale px-1 py-px text-[10px] font-medium text-brand"
+                          title="VPS NAT — berbagi IP publik dengan port berbeda"
+                        >
+                          NAT
+                        </span>
+                      )}
                     </p>
                   </td>
                   <td className="hidden px-5 py-3.5 text-copy sm:table-cell">{s.plan}</td>
