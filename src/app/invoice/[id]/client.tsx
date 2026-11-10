@@ -7,6 +7,11 @@ import {
   getTransaction,
   type WalletTransaction,
 } from "@/lib/wallet-service";
+import {
+  getInvoiceSettings,
+  DEFAULT_INVOICE_SETTINGS,
+  type InvoiceSettings,
+} from "@/lib/invoice-settings";
 import { formatTanggal } from "@/lib/common";
 
 type profil = { nama: string; email: string } | null;
@@ -38,17 +43,20 @@ function produkDari(amount: number, kind: string): string {
 export default function InvoiceClient({ id }: { id: string }) {
   const [tx, setTx] = useState<WalletTransaction | null>(null);
   const [profil, setProfil] = useState<profil>(null);
+  const [set, setSet] = useState<InvoiceSettings>(DEFAULT_INVOICE_SETTINGS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
         const { supabase } = await import("@/lib/supabase");
-        const [t, u] = await Promise.all([
+        const [t, u, s] = await Promise.all([
           getTransaction(id),
           supabase?.auth.getUser() ?? Promise.resolve({ data: null }),
+          getInvoiceSettings().catch(() => DEFAULT_INVOICE_SETTINGS),
         ]);
         setTx(t);
+        setSet(s);
         const user = u?.data?.user;
         if (user) {
           setProfil({
@@ -154,13 +162,16 @@ export default function InvoiceClient({ id }: { id: string }) {
               </svg>
               <div>
                 <p className="text-2xl font-bold leading-7 tracking-tight text-gray-700">
-                  InData
-                  <br />
-                  Indonesia
+                  {set.company_name.split(" ").map((kata, i, arr) => (
+                    <span key={i}>
+                      {kata}
+                      {i < arr.length - 1 && i === 0 ? <br /> : i < arr.length - 1 ? " " : ""}
+                    </span>
+                  ))}
                 </p>
               </div>
             </div>
-            <p className="mt-2 text-sm text-gray-500">CV Jaring Laba Laba</p>
+            <p className="mt-2 text-sm text-gray-500">{set.company_sub}</p>
           </div>
           <p className="select-none text-4xl font-bold tracking-wide text-gray-300 print:text-gray-300">
             INVOICE
@@ -179,16 +190,16 @@ export default function InvoiceClient({ id }: { id: string }) {
         <div className="mt-12 grid grid-cols-2 gap-10">
           <div>
             <p className="border-b border-gray-400 pb-1 text-gray-700">
-              CLIENT : {profil?.nama ?? "Pelanggan"}
+              CLIENT : {set.client_name || profil?.nama || "Pelanggan"}
             </p>
             <p className="mt-8 border-b border-gray-400 pb-1 text-gray-800">{produk}</p>
           </div>
           <div>
             <p className="border-b border-gray-400 pb-1 text-center text-gray-700">
-              PAYMENT TO CV JALA
+              {set.payee_line}
             </p>
             <p className="mt-2 border-b border-gray-400 pb-1 text-center text-gray-700">
-              Mandiri 1100007267880
+              {set.bank_line}
             </p>
             <p className="mt-2 border-b border-gray-400 pb-1 text-center text-gray-400">
               &nbsp;
@@ -304,14 +315,16 @@ export default function InvoiceClient({ id }: { id: string }) {
           ))}
         </div>
         <p className="mt-4 text-center text-sm italic text-gray-600">
-          Untuk informasi lebih lanjut hubungi kontak, +62 812-2138-6406
+          Untuk informasi lebih lanjut hubungi kontak, {set.contact_phone}
         </p>
 
         {/* ============ SALES RECEIPT ============ */}
         <div className="mt-16 grid grid-cols-2 gap-10">
           <div>
             <p className="border-b border-gray-400 pb-1 text-gray-700">CLIENT</p>
-            <p className="mt-2 font-bold text-gray-800">{profil?.nama ?? "Pelanggan"}</p>
+            <p className="mt-2 font-bold text-gray-800">
+              {set.client_name || profil?.nama || "Pelanggan"}
+            </p>
             <p className="mt-1 text-xs text-gray-500">
               *Lampiran Details terlampir — {formatTanggal(tx.created_at)}
             </p>
@@ -321,7 +334,7 @@ export default function InvoiceClient({ id }: { id: string }) {
               SALES RECEIPT
             </p>
             <p className="mt-6 border-b border-gray-400 pb-1 text-center text-gray-700">
-              {profil?.nama ?? "CV JALA"}
+              {set.sales_name || profil?.nama || "CV JALA"}
             </p>
             <p className="mt-8 border-b border-gray-400 pb-1 text-center text-gray-700">
               {tanggalPendek(tx.created_at)}
