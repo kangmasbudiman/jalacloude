@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { HardDriveUpload, ArrowLeft } from "lucide-react";
 import { MENU_ITEMS, findMenu } from "@/lib/menu";
 
+/** Placeholder statis per-slug — tidak perlu streaming instan */
+export const instant = false;
+
 /** Halaman placeholder untuk menu yang belum dibangun (Segera Hadir) */
 export function generateStaticParams() {
   return MENU_ITEMS.filter((item) => item.slug).map((item) => ({
