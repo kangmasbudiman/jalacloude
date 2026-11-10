@@ -136,7 +136,7 @@ export default function VpsDetailClient({ id }: { id: string }) {
   const diskPct = 12 + metrics.diskGb * 0.4 % 40;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <Link

@@ -121,7 +121,7 @@ export default function VpsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-medium tracking-tight text-ink">Cloud VPS</h1>

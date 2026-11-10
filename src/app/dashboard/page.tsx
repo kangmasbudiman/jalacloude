@@ -50,7 +50,7 @@ export default function DashboardPage() {
   const firstName = displayName.split(" ")[0];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="space-y-8">
       {/* Sambutan */}
       <div className="rounded-2xl border border-line bg-white p-6 sm:p-8">
         <h1 className="text-2xl font-medium tracking-tight text-ink sm:text-3xl">
