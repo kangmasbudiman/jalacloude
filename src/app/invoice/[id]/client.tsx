@@ -2,15 +2,38 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Printer, TriangleAlert, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, Printer, TriangleAlert } from "lucide-react";
 import {
   getTransaction,
-  invoiceNumber,
   type WalletTransaction,
 } from "@/lib/wallet-service";
-import { rupiah, formatTanggal } from "@/lib/common";
+import { formatTanggal } from "@/lib/common";
 
 type profil = { nama: string; email: string } | null;
+
+/** Format angka ala invoice: 350,000 */
+function angka(value: number): string {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+/** Bulan romawi untuk nomor invoice (spt template: 326/IDI-INV/ID/X/026) */
+const ROMAWI = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+
+/** DD-Mon-YY ala template (16-Oct-26) */
+function tanggalPendek(iso: string): string {
+  const d = new Date(iso);
+  const bln = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${String(d.getDate()).padStart(2, "0")}-${bln[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`;
+}
+
+/** Nama produk dinamis: mengikuti paket sesuai nominal transaksi */
+function produkDari(amount: number, kind: string): string {
+  if (kind !== "purchase") return "Top-up Saldo Dompet";
+  if (amount === 350_000) return "Jala Mini — Cloud VPS Basic";
+  if (amount === 550_000) return "Jala Pro — Cloud VPS Standard";
+  if (amount === 645_000) return "Jala Max — Cloud VPS Pro";
+  return "Cloud VPS";
+}
 
 export default function InvoiceClient({ id }: { id: string }) {
   const [tx, setTx] = useState<WalletTransaction | null>(null);
@@ -20,7 +43,6 @@ export default function InvoiceClient({ id }: { id: string }) {
   useEffect(() => {
     (async () => {
       try {
-        // transaksi + profil pembayar
         const { supabase } = await import("@/lib/supabase");
         const [t, u] = await Promise.all([
           getTransaction(id),
@@ -45,15 +67,15 @@ export default function InvoiceClient({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <div className="grid min-h-dvh place-items-center bg-surface">
-        <Loader2 className="size-6 animate-spin text-brand" />
+      <div className="grid min-h-dvh place-items-center bg-gray-200">
+        <Loader2 className="size-6 animate-spin text-blue-600" />
       </div>
     );
   }
 
   if (!tx) {
     return (
-      <div className="grid min-h-dvh place-items-center bg-surface px-6 text-center">
+      <div className="grid min-h-dvh place-items-center bg-gray-200 px-6 text-center">
         <div>
           <TriangleAlert className="mx-auto size-10 text-amber-500" />
           <h1 className="mt-4 text-xl font-medium text-ink">Invoice tidak ditemukan</h1>
@@ -62,7 +84,7 @@ export default function InvoiceClient({ id }: { id: string }) {
           </p>
           <Link
             href="/dashboard/billing"
-            className="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-dark"
+            className="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
           >
             <ArrowLeft className="size-4" /> Kembali ke Billing
           </Link>
@@ -71,125 +93,223 @@ export default function InvoiceClient({ id }: { id: string }) {
     );
   }
 
-  const adalahPembelian = tx.kind === "purchase";
-  const jumlahBaris = [
-    {
-      uraian: tx.description,
-      status: tx.status,
-    },
-  ];
+  const purchase = tx.kind === "purchase";
+  const produk = produkDari(tx.amount, tx.kind);
+
+  // Nomor invoice ala template: {seq}/JLC-INV/ID/{bulan-romawi}/{tahun-2digit}
+  const d = new Date(tx.created_at);
+  const awalTahun = new Date(d.getFullYear(), 0, 1);
+  const hariKe = Math.floor((d.getTime() - awalTahun.getTime()) / 86_400_000) + 1;
+  const noInvoice = `${String(hariKe).padStart(3, "0")}/JLC-INV/ID/${ROMAWI[d.getMonth() + 1]}/${String(d.getFullYear()).slice(-2).padStart(3, "0")}`;
 
   return (
-    <div className="min-h-dvh bg-surface py-10 print:bg-white print:py-0">
-      <div className="mx-auto max-w-3xl px-4">
-        {/* Aksi (hilang saat dicetak) */}
-        <div className="mb-4 flex items-center justify-between print:hidden">
-          <Link
-            href="/dashboard/billing"
-            className="inline-flex items-center gap-1.5 text-sm text-copy hover:text-ink"
-          >
-            <ArrowLeft className="size-4" /> Dompet &amp; Tagihan
-          </Link>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-dark"
-          >
-            <Printer className="size-4" /> Cetak / Simpan PDF
-          </button>
+    <div className="min-h-dvh bg-gray-200 py-8 print:bg-white print:py-0">
+      {/* Aksi (hilang saat dicetak) */}
+      <div className="mx-auto mb-3 flex max-w-[210mm] items-center justify-between px-4 print:hidden">
+        <Link
+          href="/dashboard/billing"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="size-4" /> Dompet &amp; Tagihan
+        </Link>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <Printer className="size-4" /> Cetak / Simpan PDF
+        </button>
+      </div>
+
+      {/* Lembar A4 */}
+      <div
+        className="mx-auto max-w-[210mm] bg-white px-10 py-8 text-[13px] leading-relaxed text-gray-800 shadow-lg print:min-h-dvh print:shadow-none"
+        style={{ fontFamily: "ui-monospace, 'Courier New', monospace" }}
+      >
+        {/* ================= KOP ================= */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid size-14 place-items-center rounded-lg border-[3px] border-blue-600 text-2xl font-bold text-blue-600">
+              J
+            </span>
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-gray-700">
+                Jala Cloud
+              </p>
+              <p className="mt-1 text-sm text-gray-500">CV JALA</p>
+            </div>
+          </div>
+          <p className="select-none text-4xl font-bold tracking-wide text-gray-300 print:text-gray-300">
+            INVOICE
+          </p>
         </div>
 
-        {/* Dokumen invoice */}
-        <div className="rounded-2xl border border-line bg-white p-7 shadow-sm print:rounded-none print:border-0 print:shadow-none sm:p-10">
-          {/* Kop */}
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-6">
-            <div className="flex items-center gap-3">
-              <span className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 text-lg font-bold text-white shadow-lg shadow-blue-500/25">
-                J
-              </span>
-              <div>
-                <p className="text-lg font-semibold tracking-tight text-ink">Jala Cloud</p>
-                <p className="text-xs text-copy">
-                  CV JALA · Server aktif dalam 60 detik
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-wide text-copy">Invoice</p>
-              <p className="font-mono text-sm font-semibold text-ink">
-                {invoiceNumber(tx)}
-              </p>
-              <span
-                className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                  tx.status === "success"
-                    ? "bg-emerald-50 text-emerald-600"
-                    : "bg-amber-50 text-amber-600"
-                }`}
-              >
-                <CheckCircle2 className="size-3" />
-                {tx.status === "success" ? "Lunas" : tx.status}
-              </span>
-            </div>
+        {/* Tanggal & nomor (kanan, garis bawah) */}
+        <div className="mt-6 ml-auto w-72 border-b border-gray-400 pb-1 text-right text-gray-700">
+          {tanggalPendek(tx.created_at)}
+        </div>
+        <div className="mt-10 ml-auto w-72 border-b border-gray-400 pb-1 text-right text-gray-700">
+          {noInvoice}
+        </div>
+
+        {/* ============ CLIENT & PAYMENT TO ============ */}
+        <div className="mt-12 grid grid-cols-2 gap-10">
+          <div>
+            <p className="border-b border-gray-400 pb-1 text-gray-700">
+              CLIENT : {profil?.nama ?? "Pelanggan"}
+            </p>
+            <p className="mt-8 border-b border-gray-400 pb-1 text-gray-800">{produk}</p>
+          </div>
+          <div>
+            <p className="border-b border-gray-400 pb-1 text-center text-gray-700">
+              PAYMENT TO CV JALA
+            </p>
+            <p className="mt-2 border-b border-gray-400 pb-1 text-center text-gray-700">
+              Mandiri 1100007267880
+            </p>
+            <p className="mt-2 border-b border-gray-400 pb-1 text-center text-gray-400">
+              &nbsp;
+            </p>
+          </div>
+        </div>
+
+        {/* ============ TABEL ITEM ============ */}
+        <div className="mt-14">
+          <table className="w-full border border-gray-400">
+            <thead>
+              <tr className="bg-gray-500 text-white">
+                <th className="border border-gray-400 px-2 py-1.5 text-center text-sm font-semibold">
+                  Phase
+                </th>
+                <th className="border border-gray-400 px-2 py-1.5 text-center text-sm font-semibold">
+                  DESCRIPTION
+                </th>
+                <th className="border border-gray-400 px-2 py-1.5 text-center text-sm font-semibold">
+                  QTY
+                </th>
+                <th className="border border-gray-400 px-2 py-1.5 text-center text-sm font-semibold">
+                  UNIT PRICE
+                </th>
+                <th className="border border-gray-400 px-2 py-1.5 text-center text-sm font-semibold">
+                  TOTAL
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border border-gray-400 px-2 py-1.5 text-center">1</td>
+                <td className="border border-gray-400 px-2 py-1.5">{tx.description}</td>
+                <td className="border border-gray-400 px-2 py-1.5 text-center">1</td>
+                <td className="border border-gray-400 px-2 py-1.5 text-right">
+                  Rp {angka(tx.amount)}
+                </td>
+                <td className="border border-gray-400 px-2 py-1.5 text-right">
+                  Rp {angka(tx.amount)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* ============ REMARKS + REKAP ============ */}
+        <div className="mt-0 grid grid-cols-2 gap-10">
+          {/* Kiri: remarks */}
+          <div className="pt-2">
+            <p className="text-gray-800">Remarks / Instructions:</p>
+            <p className="mt-1 text-xs text-gray-500">
+              {purchase
+                ? "Pembayaran VPS secara credits (saldo dompet), langsung terpotong otomatis."
+                : "Pengisian saldo dompet untuk pembayaran tagihan."}
+            </p>
+            <p className="mt-16 text-center text-xl tracking-widest text-gray-500">
+              THANK YOU
+            </p>
           </div>
 
-          {/* Info pembayar */}
-          <div className="mt-6 grid gap-6 sm:grid-cols-2">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-copy">Ditagihkan kepada</p>
-              <p className="mt-1 font-medium text-ink">{profil?.nama ?? "Pelanggan"}</p>
-              <p className="text-sm text-copy">{profil?.email ?? "-"}</p>
-            </div>
-            <div className="sm:text-right">
-              <p className="text-xs uppercase tracking-wide text-copy">Detail pembayaran</p>
-              <p className="mt-1 text-sm text-ink">
-                Tanggal: {formatTanggal(tx.created_at)}
-              </p>
-              <p className="text-sm text-copy">Metode: Saldo Dompet (terpotong otomatis)</p>
-            </div>
-          </div>
-
-          {/* Rincian */}
-          <div className="mt-8 overflow-hidden rounded-xl border border-line">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wide text-copy">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Uraian</th>
-                  <th className="px-4 py-3 text-right font-medium">Jumlah</th>
-                </tr>
-              </thead>
+          {/* Kanan: subtotal dst */}
+          <div className="pt-2">
+            <table className="w-full border border-gray-400">
               <tbody>
-                {jumlahBaris.map((b) => (
-                  <tr key={b.uraian} className="border-t border-line">
-                    <td className="px-4 py-3.5 text-ink">{b.uraian}</td>
-                    <td className="px-4 py-3.5 text-right font-medium text-ink">
-                      {rupiah(tx.amount)}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="border-t border-line bg-surface">
-                  <td className="px-4 py-3 font-semibold text-ink">
-                    Total{" "}
-                    <span className="font-normal text-copy">
-                      ({adalahPembelian ? "pembayaran langsung dari saldo" : "pengisian saldo"})
-                    </span>
+                <tr className="bg-gray-100">
+                  <td className="border border-gray-400 px-2 py-1.5">SUBTOTAL</td>
+                  <td className="border border-gray-400 px-2 py-1.5 text-right">
+                    Rp {angka(tx.amount)}
                   </td>
-                  <td className="px-4 py-3 text-right text-base font-semibold text-ink">
-                    {rupiah(tx.amount)}
+                </tr>
+                <tr>
+                  <td className="border border-gray-400 px-2 py-1.5">DISKON</td>
+                  <td className="border border-gray-400 px-2 py-1.5 text-right">
+                    &nbsp;
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-400 px-2 py-1.5">ADMIN Cost</td>
+                  <td className="border border-blue-300 bg-blue-200 px-2 py-1.5 text-right font-semibold">
+                    Rp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-
+                  </td>
+                </tr>
+                <tr className="bg-gray-100">
+                  <td className="border border-gray-400 px-2 py-1.5">TOTAL</td>
+                  <td className="border border-gray-400 px-2 py-1.5 text-right">
+                    Rp {angka(tx.amount)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-400 px-2 py-1.5 font-bold">
+                    PAYMENT&nbsp; CREDITS
+                  </td>
+                  <td className="border border-red-300 bg-red-200 px-2 py-1.5 text-right font-semibold text-red-700">
+                    Rp {angka(tx.amount)}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </div>
 
-          {/* Catatan */}
-          <p className="mt-6 text-xs leading-relaxed text-copy">
-            Invoice ini adalah bukti pembayaran otomatis terbit dari sistem Jala Cloud.
-            Dana dibayar langsung dari saldo dompet tanpa langkah manual. Anda dapat
-            mencetak halaman ini sebagai arsip (Ctrl/Cmd + P → Save as PDF).
-          </p>
-          <p className="mt-4 border-t border-line pt-4 text-center text-xs text-copy">
-            CV JALA · Jala Cloud · jalacloud.id
-          </p>
+        {/* ============ METODE BAYAR ============ */}
+        <div className="mt-8 flex items-center justify-between px-4 text-gray-600">
+          {["CASH", "CREDIT CARD", "BLOCKCHAIN", "SALDO / CREDITS"].map((m) => (
+            <span key={m} className="flex items-center gap-2">
+              {m}
+              <span
+                className={`inline-block size-4 border border-gray-400 ${
+                  m === "SALDO / CREDITS" ? "bg-gray-700" : "bg-gray-100"
+                }`}
+              />
+            </span>
+          ))}
+        </div>
+        <p className="mt-4 text-center text-sm italic text-gray-600">
+          Untuk informasi lebih lanjut hubungi kontak, +62 812-2138-6406
+        </p>
+
+        {/* ============ SALES RECEIPT ============ */}
+        <div className="mt-16 grid grid-cols-2 gap-10">
+          <div>
+            <p className="border-b border-gray-400 pb-1 text-gray-700">CLIENT</p>
+            <p className="mt-2 font-bold text-gray-800">{profil?.nama ?? "Pelanggan"}</p>
+            <p className="mt-1 text-xs text-gray-500">
+              *Lampiran Details terlampir — {formatTanggal(tx.created_at)}
+            </p>
+          </div>
+          <div>
+            <p className="text-right text-3xl font-bold tracking-wide text-gray-300 print:text-gray-300">
+              SALES RECEIPT
+            </p>
+            <p className="mt-6 border-b border-gray-400 pb-1 text-center text-gray-700">
+              {profil?.nama ?? "CV JALA"}
+            </p>
+            <p className="mt-8 border-b border-gray-400 pb-1 text-center text-gray-700">
+              {tanggalPendek(tx.created_at)}
+            </p>
+            <div className="mt-6 border-2 border-gray-500 px-6 py-5">
+              <p className="flex items-baseline justify-between text-xl font-bold text-gray-700">
+                <span>PAYMENT</span>
+                <span>Rp&nbsp;.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{angka(tx.amount)}</span>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
