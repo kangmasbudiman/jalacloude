@@ -14,7 +14,9 @@ export const supabase = isSupabaseConfigured
         flowType: "pkce",
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true,
+        // pertukaran kode PKCE ditangani manual di /auth/callback
+        // (halaman callback memanggil exchangeCodeForSession secara eksplisit)
+        detectSessionInUrl: false,
       },
     })
   : null;

@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
-import { useAuth } from "@/components/auth-provider";
+import { supabase } from "@/lib/supabase";
 
 /** Ambil tujuan redirect yang disimpan halaman login sebelum OAuth dimulai */
 function popRedirectTarget(): string {
@@ -17,56 +16,97 @@ function popRedirectTarget(): string {
   }
 }
 
+/** Deskripsi ramah untuk error dari Supabase/Google */
+function friendlyError(raw: string): string {
+  if (/verif|code/i.test(raw)) {
+    return "Kode verifikasi login tidak cocok. Ini biasanya karena halaman login dibuka ulang — silakan login lagi dari awal.";
+  }
+  if (/redirect/i.test(raw)) {
+    return "Redirect URL belum terdaftar. Pastikan http://localhost:3000/auth/callback ada di Supabase → Authentication → URL Configuration.";
+  }
+  return raw;
+}
+
 export default function AuthCallbackPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [message, setMessage] = useState("Proses login Google gagal atau dibatalkan.");
   const targetRef = useRef("/dashboard");
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startedRef = useRef(false);
 
-  // 1. Baca parameter error OAuth (jika ada)
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const oauthError =
-      url.searchParams.get("error_description") ??
-      url.searchParams.get("error") ??
-      url.hash.match(/error_description=([^&]+)/)?.[1];
+    if (startedRef.current) return;
+    startedRef.current = true;
 
-    targetRef.current = popRedirectTarget();
+    const run = async () => {
+      // 0. Tanpa kredensial Supabase → tidak ada yang bisa ditukar
+      if (!supabase) {
+        setStatus("error");
+        setMessage("Supabase belum dikonfigurasi — isi .env.local terlebih dahulu.");
+        return;
+      }
 
-    if (oauthError) {
-      setStatus("error");
-      setMessage(
-        decodeURIComponent(oauthError).replace(/\+/g, " ") ||
-          "Proses login Google gagal atau dibatalkan.",
-      );
-      return;
-    }
+      // 1. Deteksi error OAuth dari URL (query maupun hash)
+      const url = new URL(window.location.href);
+      const oauthError =
+        url.searchParams.get("error_description") ??
+        url.searchParams.get("error") ??
+        url.hash.match(/error_description=([^&]+)/)?.[1];
 
-    // 2. Jatuhkan ke error bila pertukaran kode PKCE tidak selesai dalam 15 detik
-    timeoutRef.current = setTimeout(() => {
-      setStatus("error");
-      setMessage(
-        "Login melebihi batas waktu. Pastikan Redirect URL http://localhost:3000/auth/callback sudah terdaftar di Supabase.",
-      );
-    }, 15000);
+      targetRef.current = popRedirectTarget();
 
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (oauthError) {
+        setMessage(friendlyError(decodeURIComponent(oauthError).replace(/\+/g, " ")));
+        setStatus("error");
+        return;
+      }
+
+      // 2. Sudah ada sesi (mis. user menekan back ke callback) → langsung sukses
+      try {
+        const { data: existing } = await supabase.auth.getSession();
+        if (existing.session) {
+          setStatus("success");
+          setTimeout(() => window.location.replace(targetRef.current), 600);
+          return;
+        }
+      } catch {
+        /* lanjut ke pertukaran kode */
+      }
+
+      // 3. Kode PKCE wajib ada — tanpa ini pasti gagal acessu
+      const code = url.searchParams.get("code");
+      if (!code) {
+        setMessage(
+          "Parameter kode login tidak ditemukan di URL. Pastikan Redirect URL http://localhost:3000/auth/callback terdaftar di Supabase → Authentication → URL Configuration.",
+        );
+        setStatus("error");
+        return;
+      }
+
+      // 4. Pertukaran kode EKSPLISIT (bukan mengandalkan deteksi otomatis)
+      try {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setMessage(friendlyError(error.message));
+          setStatus("error");
+          return;
+        }
+        const { data: afterExchange } = await supabase.auth.getSession();
+        if (!afterExchange.session) {
+          setMessage("Sesi tidak dapat dibuat setelah pertukaran kode. Silakan coba lagi.");
+          setStatus("error");
+          return;
+        }
+        // 5. Navigasi penuh ke tujuan — memastikan semua layout membaca sesi dari storage
+        setStatus("success");
+        setTimeout(() => window.location.replace(targetRef.current), 600);
+      } catch (e) {
+        setMessage(friendlyError(e instanceof Error ? e.message : "Kesalahan tidak diketahui"));
+        setStatus("error");
+      }
     };
-  }, []);
 
-  // 3. Sesi berhasil didapat → sukses lalu pindah ke tujuan
-  useEffect(() => {
-    if (loading || status === "error") return;
-    if (user && status !== "success") {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      setStatus("success");
-      const t = setTimeout(() => router.replace(targetRef.current), 800);
-      return () => clearTimeout(t);
-    }
-  }, [user, loading, status, router]);
+    run();
+  }, []);
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface px-4">
