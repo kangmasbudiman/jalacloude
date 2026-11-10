@@ -8,6 +8,7 @@ import {
   TriangleAlert,
   X,
   History,
+  FileText,
 } from "lucide-react";
 import {
   getBalance,
@@ -134,6 +135,7 @@ export default function BillingPage() {
                   <th className="px-5 py-3 font-medium">Deskripsi</th>
                   <th className="px-5 py-3 font-medium">Nominal</th>
                   <th className="hidden px-5 py-3 font-medium sm:table-cell">Waktu</th>
+                  <th className="px-5 py-3 font-medium">Invoice</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,6 +169,21 @@ export default function BillingPage() {
                     </td>
                     <td className="hidden px-5 py-3.5 text-copy sm:table-cell">
                       {formatTanggal(t.created_at)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <a
+                        href={`/invoice/${t.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                          t.kind === "purchase"
+                            ? "bg-brand-pale text-brand hover:bg-brand hover:text-white"
+                            : "bg-surface text-copy hover:text-ink"
+                        }`}
+                        title={t.kind === "purchase" ? "Lihat & cetak invoice" : "Lihat bukti saldo"}
+                      >
+                        <FileText className="size-3.5" /> Lihat
+                      </a>
                     </td>
                   </tr>
                 ))}

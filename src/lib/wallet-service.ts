@@ -51,6 +51,31 @@ export async function listTransactions(): Promise<WalletTransaction[]> {
   return (data ?? []) as WalletTransaction[];
 }
 
+/** Satu transaksi berdasarkan id (untuk halaman invoice) */
+export async function getTransaction(id: string): Promise<WalletTransaction | null> {
+  if (isDemoMode || !supabase) {
+    return lsAll().find((t) => t.id === id) ?? null;
+  }
+  const { data, error } = await supabase
+    .from("wallet_transactions")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) return null;
+  return data as WalletTransaction;
+}
+
+/** Nomor invoice yang stabil dari transaksi (INV-YYYYMMDD-XXXX) */
+export function invoiceNumber(t: WalletTransaction): string {
+  const d = new Date(t.created_at);
+  const ymd = [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("");
+  return `INV-${ymd}-${t.id.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
+}
+
 /** Catat pengisian saldo */
 export async function topUp(amount: number, description = "Pengisian saldo"): Promise<void> {
   if (amount <= 0) throw new Error("Nominal top-up harus lebih dari 0");
