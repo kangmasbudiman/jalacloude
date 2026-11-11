@@ -28,6 +28,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [loading, user, unconfigured, pathname, router]);
 
+  // admin hanya memakai Admin Panel — arahkan semua halaman dashboard ke sana
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (!pathname.startsWith("/dashboard/admin")) {
+      router.replace("/dashboard/admin");
+    }
+  }, [isAdmin, pathname, router]);
+
   // simpan preferensi sidebar
   useEffect(() => {
     setCollapsed(localStorage.getItem("sidebar-collapsed") === "1");
@@ -73,7 +81,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
-        {MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
+        {(isAdmin
+          ? MENU_ITEMS.filter((item) => item.slug === "admin")
+          : MENU_ITEMS.filter((item) => !item.adminOnly)
+        ).map((item) => {
           const isActive = activeSlug === item.slug;
           return (
             <Link
