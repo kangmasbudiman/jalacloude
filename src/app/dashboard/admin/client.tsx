@@ -11,6 +11,7 @@ import {
   Users,
   ReceiptText,
   ExternalLink,
+  Server,
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
@@ -23,9 +24,21 @@ import {
   type Invoice,
   type Profile,
 } from "@/lib/invoice-service";
+import { listVpsOfClient, type VpsServer } from "@/lib/vps-service";
+import { findPlan } from "@/lib/plans";
 import { rupiah, formatTanggal } from "@/lib/common";
 
 const ROMAWI = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+
+/** Tanggal jatuh tempo berikutnya dari due_day (1–31) */
+function jatuhTempoBerikut(dueDay: number | null): string {
+  if (!dueDay) return "—";
+  const now = new Date();
+  const awalHariIni = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const bulanIni = new Date(now.getFullYear(), now.getMonth(), dueDay);
+  const target = bulanIni >= awalHariIni ? bulanIni : new Date(now.getFullYear(), now.getMonth() + 1, dueDay);
+  return target.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
 
 /** Nomor invoice saran: {seq}/JLC-INV/ID/{bulan}/{tahun} */
 function nomorBaru(urutan: number): string {
@@ -47,6 +60,8 @@ export default function AdminPage() {
 
   const [clients, setClients] = useState<Profile[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [orders, setOrders] = useState<VpsServer[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,6 +100,39 @@ export default function AdminPage() {
     if (isAdmin) load();
     else setLoading(false);
   }, [authLoading, isAdmin, load]);
+
+  // muat orderan (VPS) milik client terpilih
+  useEffect(() => {
+    if (!clientId) {
+      setOrders([]);
+      return;
+    }
+    let aktif = true;
+    setOrdersLoading(true);
+    listVpsOfClient(clientId)
+      .then((o) => {
+        if (aktif) setOrders(o);
+      })
+      .catch((e) => {
+        if (aktif) setError(e instanceof Error ? e.message : "Gagal memuat order");
+      })
+      .finally(() => {
+        if (aktif) setOrdersLoading(false);
+      });
+    return () => {
+      aktif = false;
+    };
+  }, [clientId]);
+
+  /** Prefill form invoice dari order yang dipilih */
+  const pilihOrder = (o: VpsServer) => {
+    const plan = findPlan(o.plan);
+    setDescription(`Cloud VPS ${plan.name} — ${o.os}`);
+    setAmount(plan.price);
+    setError(null);
+    setDone(`Order "${o.name}" dipilih — tinggal lampirkan file PDF dan kirim.`);
+    setTimeout(() => setDone(null), 3000);
+  };
 
   const kirim = async () => {
     setError(null);
@@ -315,6 +363,77 @@ export default function AdminPage() {
           </button>
         </div>
       </div>
+
+      {/* Orderan client terpilih */}
+      {clientId && (
+        <div className="overflow-hidden rounded-2xl border border-line bg-white">
+          <div className="flex items-center justify-between border-b border-line bg-surface px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <Server className="size-4 text-copy" />
+              <h2 className="font-medium text-ink">Orderan Client</h2>
+            </div>
+            <span className="text-xs text-copy">
+              {orders.length} langganan · jatuh tempo bulanan
+            </span>
+          </div>
+          {ordersLoading ? (
+            <div className="grid place-items-center py-12">
+              <Loader2 className="size-5 animate-spin text-brand" />
+            </div>
+          ) : orders.length === 0 ? (
+            <p className="px-5 py-10 text-center text-sm text-copy">
+              Client ini belum punya orderan VPS.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead className="border-b border-line text-xs uppercase tracking-wide text-copy">
+                  <tr>
+                    <th className="px-5 py-3 font-medium">Server</th>
+                    <th className="px-5 py-3 font-medium">Paket / OS</th>
+                    <th className="px-5 py-3 font-medium">Biaya Bulanan</th>
+                    <th className="px-5 py-3 font-medium">Jatuh Tempo</th>
+                    <th className="px-5 py-3 font-medium" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((o) => {
+                    const plan = findPlan(o.plan);
+                    return (
+                      <tr key={o.id} className="border-b border-line last:border-0">
+                        <td className="px-5 py-3.5">
+                          <p className="font-medium text-ink">{o.name}</p>
+                          <p className="text-xs text-copy">
+                            {o.ip}
+                            {o.port ? `:${o.port}` : ""} · {o.status === "running" ? "Berjalan" : "Berhenti"}
+                          </p>
+                        </td>
+                        <td className="px-5 py-3.5 text-copy">
+                          {o.plan} · {o.os}
+                        </td>
+                        <td className="px-5 py-3.5 font-medium text-ink">{rupiah(plan.price)}</td>
+                        <td className="px-5 py-3.5">
+                          <p className="text-ink">Tiap tanggal {o.due_day ?? "—"}</p>
+                          <p className="text-xs text-copy">Berikutnya: {jatuhTempoBerikut(o.due_day)}</p>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <button
+                            type="button"
+                            onClick={() => pilihOrder(o)}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-brand-pale px-3 py-1 text-xs font-medium text-brand hover:bg-brand hover:text-white"
+                          >
+                            <ReceiptText className="size-3.5" /> Buat Invoice
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tabel invoice */}
       <div className="overflow-hidden rounded-2xl border border-line bg-white">

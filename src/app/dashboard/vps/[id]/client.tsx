@@ -299,6 +299,12 @@ export default function VpsDetailClient({ id }: { id: string }) {
             {rupiah(plan.price)}
             <span className="text-sm font-normal text-copy">/bln</span>
           </p>
+          {server.due_day && (
+            <p className="mt-2 text-xs text-copy">
+              Jatuh tempo tiap tanggal{" "}
+              <span className="font-medium text-ink">{server.due_day}</span>
+            </p>
+          )}
         </div>
         {[
           { icon: Camera, title: "Snapshot", desc: "Cadangkan kondisi server dalam satu klik." },

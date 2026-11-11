@@ -13,6 +13,8 @@ export type VpsServer = {
   ip: string;
   /** Port NAT — hanya diisi untuk VPS yang berbagi IP publik dengan server lain */
   port: number | null;
+  /** Tanggal jatuh tempo tagihan bulanan (1–31) */
+  due_day: number | null;
   status: VpsStatus;
   created_at: string;
 };
@@ -48,6 +50,23 @@ export async function listVps(): Promise<VpsServer[]> {
   return (data ?? []) as VpsServer[];
 }
 
+/** Server milik client tertentu (khusus admin — untuk kirim invoice) */
+export async function listVpsOfClient(userId: string): Promise<VpsServer[]> {
+  if (isDemoMode || !supabase) {
+    return lsGet<VpsServer[]>("vps", []).filter((s) => s.user_id === userId);
+  }
+  const { data, error } = await supabase
+    .from("vps_servers")
+    .select("*")
+    .eq("user_id", userId)
+    .order("due_day", { ascending: true, nullsFirst: false });
+  if (error) {
+    console.error("listVpsOfClient:", error.message);
+    throw new Error(`Gagal memuat order client: ${error.message}`);
+  }
+  return (data ?? []) as VpsServer[];
+}
+
 /** Buat server baru (ip & status diisi otomatis bila kosong) */
 export async function createVps(input: CreateVpsInput): Promise<VpsServer> {
   const payload = {
@@ -63,6 +82,7 @@ export async function createVps(input: CreateVpsInput): Promise<VpsServer> {
       user_id: userId,
       created_at: new Date().toISOString(),
       port: null,
+      due_day: null,
       ...payload,
     };
     lsSet("vps", [server, ...lsGet<VpsServer[]>("vps", [])]);
