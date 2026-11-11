@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase as supabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { getMyRole } from "@/lib/invoice-service";
 
 type AuthState = {
   /** sesi aktif (null jika belum login) */
@@ -20,6 +21,9 @@ type AuthState = {
   loading: boolean;
   /** true jika env Supabase belum diisi */
   unconfigured: boolean;
+  /** role akun: 'admin' | 'client' */
+  role: "admin" | "client";
+  isAdmin: boolean;
   /** mulai alur OAuth Google dan mengembalikan URL redirect yang dibuka */
   signInWithGoogle: (redirectTo?: string) => Promise<string | null>;
   signOut: () => Promise<void>;
@@ -30,6 +34,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
+  const [role, setRole] = useState<"admin" | "client">("client");
 
   useEffect(() => {
     if (!supabaseClient) {
@@ -51,6 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // muat role setiap kali sesi berubah
+  useEffect(() => {
+    if (!session?.user) {
+      setRole("client");
+      return;
+    }
+    let aktif = true;
+    getMyRole()
+      .then((r) => {
+        if (aktif) setRole(r);
+      })
+      .catch(() => {});
+    return () => {
+      aktif = false;
+    };
+  }, [session]);
 
   const signInWithGoogle = useCallback(async (redirectTo?: string) => {
     if (!supabaseClient) return null;
@@ -93,10 +115,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       loading,
       unconfigured: !isSupabaseConfigured,
+      role,
+      isAdmin: role === "admin",
       signInWithGoogle,
       signOut,
     }),
-    [session, loading, signInWithGoogle, signOut],
+    [session, loading, role, signInWithGoogle, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -14,7 +14,7 @@ import { useAuth } from "@/components/auth-provider";
 import { MENU_ITEMS } from "@/lib/menu";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { user, session, loading, unconfigured, signOut } = useAuth();
+  const { user, session, loading, unconfigured, signOut, isAdmin } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
-        {MENU_ITEMS.map((item) => {
+        {MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
           const isActive = activeSlug === item.slug;
           return (
             <Link

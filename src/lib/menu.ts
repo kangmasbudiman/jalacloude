@@ -14,6 +14,7 @@ import {
   GraduationCap,
   LifeBuoy,
   Settings,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +24,8 @@ export type MenuItem = {
   icon: LucideIcon;
   /** deskripsi singkat untuk halaman "Segera Hadir" */
   description: string;
+  /** hanya tampil untuk role admin */
+  adminOnly?: boolean;
 };
 
 /** Menu sidebar — daftar layanan dashboard */
@@ -82,6 +85,13 @@ export const MENU_ITEMS: MenuItem[] = [
     label: "Dompet & Tagihan",
     icon: Wallet,
     description: "Saldo, top-up, dan riwayat pembayaran.",
+  },
+  {
+    slug: "admin",
+    label: "Admin Panel",
+    icon: ShieldCheck,
+    description: "Kelola client & kirim invoice.",
+    adminOnly: true,
   },
   {
     slug: "affiliate",

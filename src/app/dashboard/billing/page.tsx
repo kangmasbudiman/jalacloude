@@ -9,6 +9,7 @@ import {
   X,
   History,
   FileText,
+  ExternalLink,
 } from "lucide-react";
 import {
   getBalance,
@@ -16,6 +17,11 @@ import {
   topUp,
   type WalletTransaction,
 } from "@/lib/wallet-service";
+import {
+  listMyInvoices,
+  invoiceFileUrl,
+  type Invoice,
+} from "@/lib/invoice-service";
 import { rupiah, formatTanggal, isDemoMode } from "@/lib/common";
 
 const QUICK_AMOUNTS = [100_000, 250_000, 500_000, 1_000_000];
@@ -23,6 +29,7 @@ const QUICK_AMOUNTS = [100_000, 250_000, 500_000, 1_000_000];
 export default function BillingPage() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [topUPModal, setTopUpModal] = useState(false);
@@ -32,15 +39,30 @@ export default function BillingPage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [saldo, txs] = await Promise.all([getBalance(), listTransactions()]);
+      const [saldo, txs, inv] = await Promise.all([
+        getBalance(),
+        listTransactions(),
+        listMyInvoices().catch(() => [] as Invoice[]),
+      ]);
       setBalance(saldo);
       setTransactions(txs);
+      setInvoices(inv);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memuat data dompet");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const bukaInvoice = async (inv: Invoice) => {
+    setError(null);
+    try {
+      const url = await invoiceFileUrl(inv);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal membuka invoice");
+    }
+  };
 
   useEffect(() => {
     load();
@@ -110,6 +132,56 @@ export default function BillingPage() {
           </p>
         )}
       </div>
+
+      {/* Invoice dari Admin */}
+      {!loading && invoices.length > 0 && (
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-medium text-ink">
+            <FileText className="size-5 text-copy" /> Invoice dari Admin
+          </h2>
+          <p className="mt-1 text-sm text-copy">
+            Dokumen tagihan yang dikirim tim Jala Cloud untuk setiap orderanmu.
+          </p>
+          <div className="mt-3 overflow-hidden rounded-2xl border border-line bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-line bg-surface text-xs uppercase tracking-wide text-copy">
+                <tr>
+                  <th className="px-5 py-3 font-medium">No. Invoice</th>
+                  <th className="hidden px-5 py-3 font-medium sm:table-cell">Deskripsi</th>
+                  <th className="px-5 py-3 font-medium">Nominal</th>
+                  <th className="hidden px-5 py-3 font-medium md:table-cell">Tanggal</th>
+                  <th className="px-5 py-3 font-medium">File</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="border-b border-line last:border-0">
+                    <td className="px-5 py-3.5 font-mono text-xs text-ink">{inv.invoice_no}</td>
+                    <td className="hidden max-w-[240px] truncate px-5 py-3.5 text-copy sm:table-cell">
+                      {inv.description}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-ink">
+                      {rupiah(Number(inv.amount))}
+                    </td>
+                    <td className="hidden px-5 py-3.5 text-copy md:table-cell">
+                      {formatTanggal(inv.issued_at).split(",")[0]}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => bukaInvoice(inv)}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-brand-pale px-2.5 py-1 text-xs font-medium text-brand hover:bg-brand hover:text-white"
+                      >
+                        <ExternalLink className="size-3.5" /> Lihat
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Riwayat transaksi */}
       <div>
