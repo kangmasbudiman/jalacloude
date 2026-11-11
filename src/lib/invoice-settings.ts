@@ -10,6 +10,8 @@ export type InvoiceSettings = {
   client_name: string;
   sales_name: string;
   contact_phone: string;
+  /** Logo terunggah (data URL base64) — null = pakai monogram bawaan */
+  logo_data: string | null;
 };
 
 export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
@@ -20,6 +22,7 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   client_name: "Rumah Sakit Royal Prima Jambi",
   sales_name: "Ronel Daniel Ramdhani",
   contact_phone: "+62 812-2138-6406",
+  logo_data: null,
 };
 
 const LS_KEY = "invoice-settings";

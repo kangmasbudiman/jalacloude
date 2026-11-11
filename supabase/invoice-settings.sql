@@ -12,6 +12,8 @@ create table if not exists public.invoice_settings (
   client_name   text not null default 'Rumah Sakit Royal Prima Jambi',
   sales_name    text not null default 'Ronel Daniel Ramdhani',
   contact_phone text not null default '+62 812-2138-6406',
+  /** Logo terunggah (data URL base64) — bila kosong, fallback ke monogram SVG */
+  logo_data     text,
   updated_at    timestamptz not null default now()
 );
 

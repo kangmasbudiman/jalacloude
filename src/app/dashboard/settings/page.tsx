@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Save, TriangleAlert, ReceiptText, CheckCircle2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, Save, TriangleAlert, ReceiptText, CheckCircle2, ImageUp, Trash2 } from "lucide-react";
 import {
   getInvoiceSettings,
   saveInvoiceSettings,
@@ -9,7 +9,7 @@ import {
   type InvoiceSettings,
 } from "@/lib/invoice-settings";
 
-const FIELDS: { key: keyof InvoiceSettings; label: string; hint?: string }[] = [
+const FIELDS: { key: Exclude<keyof InvoiceSettings, "logo_data">; label: string; hint?: string }[] = [
   { key: "company_name", label: "Nama Perusahaan (kop invoice)" },
   { key: "company_sub", label: "Badan Usaha di bawah kop", hint: "mis. CV Jaring Laba Laba" },
   { key: "client_name", label: "Nama Client", hint: "Ditagihkan kepada — tampil 2x di invoice" },
@@ -25,6 +25,24 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  /** Baca file logo → data URL base64 (dipakai langsung oleh invoice) */
+  const pickLogo = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("File harus berupa gambar (PNG/JPG/SVG).");
+      return;
+    }
+    if (file.size > 800_000) {
+      setError("Ukuran logo maksimal 800 KB — kecilkan dulu ya.");
+      return;
+    }
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = () => setValue((v) => ({ ...v, logo_data: String(reader.result) }));
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     (async () => {
@@ -75,7 +93,62 @@ export default function SettingsPage() {
           <Loader2 className="size-6 animate-spin text-brand" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
+        <div className="space-y-6">
+          {/* Logo upload */}
+          <div className="overflow-hidden rounded-2xl border border-line bg-white">
+            <div className="flex items-center gap-2 border-b border-line bg-surface px-5 py-3.5">
+              <ImageUp className="size-4 text-copy" />
+              <h2 className="font-medium text-ink">Logo Invoice</h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-5 p-5">
+              <div className="grid size-24 shrink-0 place-items-center rounded-xl border border-line bg-white">
+                {value.logo_data ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={value.logo_data}
+                    alt="Logo invoice"
+                    className="max-h-24 max-w-24 object-contain"
+                  />
+                ) : (
+                  <span className="text-xs text-copy">Belum ada</span>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-white px-4 text-sm font-medium text-ink hover:bg-surface"
+                  >
+                    <ImageUp className="size-4" /> Upload Logo
+                  </button>
+                  {value.logo_data && (
+                    <button
+                      type="button"
+                      onClick={() => setValue({ ...value, logo_data: null })}
+                      className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-4 text-sm font-medium text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="size-4" /> Hapus
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-copy">
+                  PNG/JPG/SVG, maks 800 KB. Logo asli dipakai apa adanya — tidak
+                  digambar ulang. Bila kosong, invoice memakai monogram bawaan.
+                </p>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => pickLogo(e.target.files?.[0])}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Data invoice */}
+          <div className="overflow-hidden rounded-2xl border border-line bg-white">
           <div className="flex items-center gap-2 border-b border-line bg-surface px-5 py-3.5">
             <ReceiptText className="size-4 text-copy" />
             <h2 className="font-medium text-ink">Data Invoice</h2>
@@ -115,6 +188,7 @@ export default function SettingsPage() {
               )}
               Simpan Pengaturan
             </button>
+          </div>
           </div>
         </div>
       )}

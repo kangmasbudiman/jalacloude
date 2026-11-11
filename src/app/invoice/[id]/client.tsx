@@ -137,7 +137,17 @@ export default function InvoiceClient({ id }: { id: string }) {
         {/* ================= KOP ================= */}
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-4">
+            {set.logo_data ? (
+              // Logo asli terunggah — dipakai apa adanya
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={set.logo_data}
+                alt={set.company_name}
+                className="h-16 w-auto object-contain"
+              />
+            ) : (
+              <div>
+                <div className="flex items-center gap-4">
               {/* Monogram "ID" — gradien biru ala logo asli */}
               <svg
                 viewBox="0 0 100 100"
@@ -160,18 +170,20 @@ export default function InvoiceClient({ id }: { id: string }) {
                   <path d="M42 30 H54 A20 20 0 0 1 54 70 H42" strokeWidth="9" />
                 </g>
               </svg>
-              <div>
-                <p className="text-2xl font-bold leading-7 tracking-tight text-gray-700">
-                  {set.company_name.split(" ").map((kata, i, arr) => (
-                    <span key={i}>
-                      {kata}
-                      {i < arr.length - 1 && i === 0 ? <br /> : i < arr.length - 1 ? " " : ""}
-                    </span>
-                  ))}
-                </p>
+                <div>
+                  <p className="text-2xl font-bold leading-7 tracking-tight text-gray-700">
+                    {set.company_name.split(" ").map((kata, i, arr) => (
+                      <span key={i}>
+                        {kata}
+                        {i < arr.length - 1 && i === 0 ? <br /> : i < arr.length - 1 ? " " : ""}
+                      </span>
+                    ))}
+                  </p>
+                </div>
               </div>
-            </div>
-            <p className="mt-2 text-sm text-gray-500">{set.company_sub}</p>
+              <p className="mt-2 text-sm text-gray-500">{set.company_sub}</p>
+              </div>
+            )}
           </div>
           <p className="select-none text-4xl font-bold tracking-wide text-gray-300 print:text-gray-300">
             INVOICE
