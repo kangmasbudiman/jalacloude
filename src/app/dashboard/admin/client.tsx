@@ -165,12 +165,14 @@ export default function AdminPage() {
   };
 
   const hapus = async (inv: Invoice) => {
-    if (!confirm(`Hapus invoice ${inv.invoice_no}?`)) return;
+    if (!confirm(`Hapus invoice ${inv.invoice_no}? File PDF juga akan dihapus.`)) return;
     setBusy(true);
     setError(null);
+    setDone(null);
     try {
       await hapusInvoice(inv);
       setInvoices((prev) => prev.filter((i) => i.id !== inv.id));
+      setDone(`Invoice ${inv.invoice_no} berhasil dihapus.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menghapus");
     } finally {
