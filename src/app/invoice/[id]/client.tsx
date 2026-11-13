@@ -104,11 +104,11 @@ export default function InvoiceClient({ id }: { id: string }) {
   const purchase = tx.kind === "purchase";
   const produk = produkDari(tx.amount, tx.kind);
 
-  // Nomor invoice ala template: {seq}/JLC-INV/ID/{bulan-romawi}/{tahun-2digit}
+  // Nomor invoice ala template: {seq}/IDI-INV/ID/{bulan-romawi}/{tahun}
   const d = new Date(tx.created_at);
   const awalTahun = new Date(d.getFullYear(), 0, 1);
   const hariKe = Math.floor((d.getTime() - awalTahun.getTime()) / 86_400_000) + 1;
-  const noInvoice = `${String(hariKe).padStart(3, "0")}/JLC-INV/ID/${ROMAWI[d.getMonth() + 1]}/${String(d.getFullYear()).slice(-2).padStart(3, "0")}`;
+  const noInvoice = `${String(hariKe).padStart(3, "0")}/IDI-INV/ID/${ROMAWI[d.getMonth() + 1]}/${String(d.getFullYear()).slice(-2).padStart(3, "0")}`;
 
   return (
     <div className="min-h-dvh bg-gray-200 py-8 print:bg-white print:py-0">

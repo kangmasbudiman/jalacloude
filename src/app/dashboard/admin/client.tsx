@@ -40,10 +40,10 @@ function jatuhTempoBerikut(dueDay: number | null): string {
   return target.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
-/** Nomor invoice saran: {seq}/JLC-INV/ID/{bulan}/{tahun} */
+/** Nomor invoice saran: {seq}/IDI-INV/ID/{bulan-romawi}/{tahun} */
 function nomorBaru(urutan: number): string {
   const d = new Date();
-  return `${String(urutan).padStart(3, "0")}/JLC-INV/ID/${ROMAWI[d.getMonth() + 1]}/${String(d.getFullYear()).slice(-2).padStart(3, "0")}`;
+  return `${String(urutan).padStart(3, "0")}/IDI-INV/ID/${ROMAWI[d.getMonth() + 1]}/${String(d.getFullYear()).slice(-2).padStart(3, "0")}`;
 }
 
 function tanggalHariIni(): string {
