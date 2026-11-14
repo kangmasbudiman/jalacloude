@@ -14,7 +14,6 @@ import {
   Server,
   CheckCircle2,
   ArrowDownLeft,
-  ArrowUpRight,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import {
@@ -447,85 +446,67 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Daftar tagihan/pembayaran masuk */}
-      <div className="overflow-hidden rounded-2xl border border-line bg-white">
-        <div className="flex items-center justify-between border-b border-line bg-surface px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <ArrowDownLeft className="size-4 text-copy" />
-            <h2 className="font-medium text-ink">Tagihan &amp; Pembayaran Masuk</h2>
-          </div>
-          <span className="text-xs text-copy">{payments.length} transaksi</span>
-        </div>
-        {payments.length === 0 ? (
-          <p className="px-5 py-12 text-center text-sm text-copy">
-            Belum ada transaksi masuk dari client.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-wide text-copy">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Waktu</th>
-                  <th className="px-5 py-3 font-medium">Client</th>
-                  <th className="px-5 py-3 font-medium">Jenis</th>
-                  <th className="px-5 py-3 font-medium">Deskripsi</th>
-                  <th className="px-5 py-3 font-medium">Nominal</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map((p) => {
-                  const c = clients.find((x) => x.id === p.user_id);
-                  const masuk = p.kind === "topup";
-                  return (
-                    <tr key={p.id} className="border-b border-line last:border-0">
-                      <td className="whitespace-nowrap px-5 py-3.5 text-copy">
-                        {formatTanggal(p.created_at)}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <p className="text-ink">{c?.full_name ?? c?.email ?? "—"}</p>
-                        <p className="text-xs text-copy">{c?.email}</p>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            masuk
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-amber-50 text-amber-600"
-                          }`}
-                        >
-                          {masuk ? (
-                            <ArrowDownLeft className="size-3" />
-                          ) : (
-                            <ArrowUpRight className="size-3" />
-                          )}
-                          {masuk ? "Pembayaran masuk" : "Tagihan terbayar"}
-                        </span>
-                      </td>
-                      <td className="max-w-[260px] truncate px-5 py-3.5 text-copy">
-                        {p.description}
-                      </td>
-                      <td
-                        className={`px-5 py-3.5 font-medium ${
-                          masuk ? "text-emerald-600" : "text-ink"
-                        }`}
-                      >
-                        {masuk ? "+" : "−"}
-                        {rupiah(p.amount)}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
-                          {p.status === "success" ? "Berhasil" : p.status}
-                        </span>
-                      </td>
+      {/* Daftar uang masuk */}
+      {(() => {
+        const uangMasuk = payments.filter((p) => p.kind === "topup");
+        return (
+          <div className="overflow-hidden rounded-2xl border border-line bg-white">
+            <div className="flex items-center justify-between border-b border-line bg-surface px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <ArrowDownLeft className="size-4 text-copy" />
+                <h2 className="font-medium text-ink">Pembayaran Masuk</h2>
+              </div>
+              <span className="text-xs text-copy">{uangMasuk.length} transaksi</span>
+            </div>
+            {uangMasuk.length === 0 ? (
+              <p className="px-5 py-12 text-center text-sm text-copy">
+                Belum ada pembayaran masuk dari client.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[780px] text-left text-sm">
+                  <thead className="border-b border-line text-xs uppercase tracking-wide text-copy">
+                    <tr>
+                      <th className="px-5 py-3 font-medium">Waktu</th>
+                      <th className="px-5 py-3 font-medium">Client</th>
+                      <th className="px-5 py-3 font-medium">Deskripsi</th>
+                      <th className="px-5 py-3 font-medium">Nominal</th>
+                      <th className="px-5 py-3 font-medium">Status</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {uangMasuk.map((p) => {
+                      const c = clients.find((x) => x.id === p.user_id);
+                      return (
+                        <tr key={p.id} className="border-b border-line last:border-0">
+                          <td className="whitespace-nowrap px-5 py-3.5 text-copy">
+                            {formatTanggal(p.created_at)}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <p className="text-ink">{c?.full_name ?? c?.email ?? "—"}</p>
+                            <p className="text-xs text-copy">{c?.email}</p>
+                          </td>
+                          <td className="max-w-[260px] truncate px-5 py-3.5 text-copy">
+                            {p.description}
+                          </td>
+                          <td className="px-5 py-3.5 font-medium text-emerald-600">
+                            +{rupiah(p.amount)}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
+                              {p.status === "success" ? "Berhasil" : p.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Tabel invoice */}
       <div className="overflow-hidden rounded-2xl border border-line bg-white">
