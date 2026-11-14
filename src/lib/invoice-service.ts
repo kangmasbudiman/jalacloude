@@ -1,5 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import { isDemoMode, currentUserId, lsGet, lsSet } from "@/lib/common";
+import type { WalletTransaction } from "@/lib/wallet-service";
+
+/** Transaksi dompet milik client — untuk daftar penerimaan di Admin Panel */
+export type ClientPayment = WalletTransaction & {
+  client?: { email: string | null; full_name: string | null } | null;
+};
 
 export type Profile = {
   id: string;
@@ -180,4 +186,17 @@ export async function invoiceFileUrl(inv: Invoice): Promise<string> {
     throw new Error(`Gagal membuka file: ${error?.message ?? "tidak tersedia"}`);
   }
   return data.signedUrl;
+}
+
+/** Semua transaksi dompet client (khusus admin) — daftar tagihan/pembayaran masuk */
+export async function listClientPayments(): Promise<ClientPayment[]> {
+  if (isDemoMode || !supabase) return [];
+  const { data, error } = await supabase
+    .from("wallet_transactions")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    throw new Error(`Gagal memuat pembayaran masuk: ${error.message}`);
+  }
+  return (data ?? []) as ClientPayment[];
 }
